@@ -31,7 +31,7 @@ function init_smiley(sm, id, s)
    sm.dv = 0.2
    -- init angle
    sm.d = rnd(1)
-   sm.dt = 0.1
+   sm.dd = 0.01
    -- init life and score
    sm.l = 3
    sm.s = s
@@ -44,7 +44,7 @@ function init_smiley(sm, id, s)
 end
 
 -- move a smiley (sm) according to its speed (dv)
-function move(sm,dv)
+function move(sm, dv)
    if (sm.z >= mz(sm.x,sm.y) and sm.dz >=0) then
       sm.z = mz(sm.x,sm.y)
       sm.dz = 0
@@ -116,35 +116,43 @@ end
 ----------------------------------------
 function AI_move(sm)
    if (move(sm, sm.dv) == false) then
-      sm.d += sm.dt
+      sm.d += sm.dd
    else
-      sm.dt = .01 * sgn(rnd(1)-.5)
+      -- random change of rotation
+      sm.dd = .01 * sgn(rnd(1)-.5)
    end
-   fire_bullet(sm)
+   if (rnd(1) < aggressivity) then
+      fire_bullet(sm)
+   end
 end
 
 ----------------------------------------
 -- pico-8 structural functions
 ----------------------------------------
 function _init()
- state = ""
- pls = {}
- for cnt in all({1, 2, 3, 4, 5, 6}) do
-    en = {}
-    init_smiley(en, cnt, 0)
-    add(pls, en)
- end
- pl = pls[1]
+   -- AI settings (mainly probabilities)
+   aggressivity = .1
+   state = ""
+
+   -- create array of smiley. id = 1 is player
+   player_id = 10
+   pls = {}
+   for cnt in all({10, 1, 2, 8, 9, 13, 15}) do
+      en = {}
+      init_smiley(en, cnt, 0)
+      add(pls, en)
+   end
+   pl = pls[1]
 end
 
 function _update()
    -- player rotation --
-   if (btn(0)) then pl.d=(pl.d+0.01)%1 end
-   if (btn(1)) then pl.d=(pl.d+0.99)%1 end
+   if (btn(0)) then pl.d=(pl.d+pl.dd)%1 end
+   if (btn(1)) then pl.d=(pl.d+1-pl.dd)%1 end
 
    -- player move --
    m = 0
-   if (btn(2)) then m = 0.2 else if (btn(3)) then m = -0.2 end end
+   if (btn(2)) then m = pl.dv else if (btn(3)) then m = -pl.dv end end
 
    -- player fire --
    if (btn(4)) then 
@@ -156,7 +164,7 @@ function _update()
 
    for en in all(pls) do
       -- move --
-      if (en.id !=1) then
+      if (en.id != player_id) then
 	 AI_move(en)
       end
       bullet(en)
@@ -333,13 +341,13 @@ function draw_3d()
 
  -- draw own bullet
  cursor(0,0) print(state)
- state = "killed "..pl.s
+ state = "killed "..pl.s.." - status "..flr(pl.l)
 
  -- draw enemies and bullets
  cursor(0,20)
  for en in all(pls) do
     print(en.id.." "..en.s)
-    if (en.id != 1) then
+    if (en.id != player_id) then
        draw_smiley(en)
     end
     draw_bullet(en)
