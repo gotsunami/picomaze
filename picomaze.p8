@@ -2,110 +2,134 @@ pico-8 cartridge // http://www.pico-8.com
 version 4
 __lua__
 
-
-function _init()
- state = ""
- score = 0 pl={}
- pl.x = 12 pl.y = 12
- pl.z = 12
- pl.d = 0.25
- pl.dz = 0
- pl.jetpack=false
-
- bl={}
- bl.x = pl.x bl.y = pl.y
- bl.d = pl.d
- bl.z = pl.z
- bl.fired=false
-
- en={}
- en.x = 8.5 en.y = 6.5
- en.z = 15.8
- en.d = 0.75
- en.dt = 0.1
- en.dz = 0
- en.l = 3
-end
-
+----------------------------------------
+-- helpers for the map
+----------------------------------------
+-- get a position of the map
 function mc(x,y)
- return mget(x,y)
+   return mget(x,y)
 end
 
+-- get the altitude of a point of the map
 function mz(x,y)
- local col=mget(x,y)
- return 16-col*0.2
+   local col=mget(x,y)
+   return 16-col*0.2
 end
 
-function move(pl,m)
-   -- z means player feet
-   if (pl.z >= mz(pl.x,pl.y) and pl.dz >=0) then
-      pl.z = mz(pl.x,pl.y)
-      pl.dz = 0
+----------------------------------------
+-- functions for all smileys/players
+----------------------------------------
+-- init a smiley
+function init_smiley(cnt)
+   sm={}
+   -- init id and colors
+   sm.id = cnt
+   sm.cl = {cnt, 0}
+   -- init position
+   sm.x = 1+flr(rnd(29)) sm.y = 1+flr(rnd(29))
+   sm.z = 12
+   sm.dz = 0
+   sm.dv = 0.2
+   -- init angle
+   sm.d = rnd(1)
+   sm.dt = 0.1
+   -- init life and score
+   sm.l = 3
+   sm.s = 0
+   -- init bullet
+   sm.bl={}
+   sm.bl.x = sm.x sm.bl.y = sm.y
+   sm.bl.d = sm.d
+   sm.bl.z = sm.z
+   sm.bl.fired=false
+   return sm
+end
+
+-- move a smiley (sm) according to its speed (dv)
+function move(sm,dv)
+   if (sm.z >= mz(sm.x,sm.y) and sm.dz >=0) then
+      sm.z = mz(sm.x,sm.y)
+      sm.dz = 0
    else
-      pl.dz=pl.dz+0.01
-      pl.z =pl.z + pl.dz
+      sm.dz=sm.dz+0.01
+      sm.z =sm.z + sm.dz
    end
 
-   dx = cos(pl.d)*m
-   dy = sin(pl.d)*m
+   dx = cos(sm.d)*dv
+   dy = sin(sm.d)*dv
    -- collision test!!!
-   if (mz(pl.x+dx*3, pl.y+dy*3) >
-       pl.z - 0.4) then
-      pl.x=pl.x+cos(pl.d)*m
-      pl.y=pl.y+sin(pl.d)*m
+   if (mz(sm.x+dx*3, sm.y+dy*3) >
+       sm.z - 0.4) then
+      sm.x=sm.x+dx
+      sm.y=sm.y+dy
       return true
    end
    return false
 end
 
-function hit(en)
-   en.l = flr(en.l - 1)
-   if (en.l == 0) then
-      score += 1
-      en.l = 3
-      en.x = rnd(32)
-      en.y = rnd(32)
-      en.z = 15.8
+-- add a hit: sh (shooter) > ta (target)
+function hit(sh, ta)
+   ta.l = flr(ta.l - 1)
+   if (ta.l == 0) then
+      sh.s += 1
+      return init_smiley(ta.id)
+   end
+   return ta
+end
+
+----------------------------------------
+-- functions for AI smileys/players
+-- call AI_move(pl) to test algorithm
+----------------------------------------
+function AI_move(sm)
+   if (move(sm, sm.dv) == false) then
+      sm.d += sm.dt
+   else
+      sm.dt = .01 * sgn(rnd(1)-.5)
    end
 end
 
+----------------------------------------
+-- pico-8 structural functions
+----------------------------------------
+function _init()
+ state = ""
+ pl = init_smiley(1)
+ 
+ ens = {}
+ for cnt in all({2, 3, 4, 5, 6}) do
+    add(ens, init_smiley(cnt))
+ end
+end
+
 function _update()
+   -- player rotation --
+   if (btn(0)) then pl.d=(pl.d+0.01)%1 end
+   if (btn(1)) then pl.d=(pl.d+0.99)%1 end
 
- if (btn(0)) then pl.d=(pl.d+0.01)%1 end
- if (btn(1)) then pl.d=(pl.d+0.99)%1 end
+   -- player move --
+   m = 0
+   if (btn(2)) then m = 0.2 else if (btn(3)) then m = -0.2 end end
 
- if (btn(2)) then m = 0.2
- else
-    if (btn(3)) then m = -0.2
-    else
-       m = 0
-    end
- end
+   move(pl, m)
 
- move(pl, m)
+   -- player fire --
+   if (btn(4)) then 
+      if (pl.bl.fired==false) then
+	 pl.bl.d = pl.d
+	 pl.bl.x = pl.x
+	 pl.bl.y = pl.y
+	 pl.bl.z = pl.z
+	 pl.bl.fired = true
+      end
+   end
 
- if (btn(4)) then 
-    if (bl.fired==false) then
-       bl.d = pl.d
-       bl.x = pl.x
-       bl.y = pl.y
-       bl.z = pl.z
-       bl.fired = true
-    end
-
-  --if (pl.jetpack or 
-  --    mz(pl.x,pl.y) < pl.z+0.1)
-  --then
-  -- pl.dz=-0.15
-  --end
- end
-
- if (move(en, 0.2) == false) then
-    en.d += en.dt
- else
-    en.dt = .01 * sgn(rnd(1)-.5)
- end
- en.l = min(en.l + 0.005, 3)
+   for en in all(ens) do
+      -- move --
+      AI_move(en)
+      -- life restore --
+      en.l = min(en.l + 0.005, 3)
+   end
 
 end
 
@@ -184,8 +208,6 @@ function draw_3d()
    celz=16-col*0.2
 
 
---   print(ix.." "..iy.." "..col)
-    
    if (col==15) then skip=false end
 
    --discard close hits
@@ -198,15 +220,13 @@ function draw_3d()
 
    -- draw ground to new point
    if (sy1 < sy) then
-    --line(sx,sy1-1,sx,sy,col0)
     gcol=3
     if(celz0 < 16) then gcol=11 end
     line(sx,sy1-1,sx,sy,gcol)
     sy=sy1
    end
 
-   -- draw wall if higher
-   
+   -- draw wall if higher   
    if (celz < celz0) then
     local sy1 = celz-z
     sy1 = (sy1 * 64)/tdist
@@ -223,22 +243,22 @@ function draw_3d()
 
  -- draw bullet
  cursor(0,0) print(state)
- state = "killed "..score
- if (bl.fired==true) then
+ state = "killed "..pl.s
+ if (pl.bl.fired==true) then
     state = "FIRED"
-    bl.x=bl.x+cos(bl.d)*0.55
-    bl.y=bl.y+sin(bl.d)*0.55
-    if (sqrt((bl.x - en.x)^2 + (bl.y - en.y)^2) < 0.25) then
-       hit(en)
-       bl.fired = false
+    pl.bl.x=pl.bl.x+cos(pl.bl.d)*0.55
+    pl.bl.y=pl.bl.y+sin(pl.bl.d)*0.55
+    if (sqrt((pl.bl.x - en.x)^2 + (pl.bl.y - en.y)^2) < 0.25) then
+       en = hit(pl, en)
+       pl.bl.fired = false
     end
-    local wz = mz(bl.x, bl.y)
-    if (wz < 13.1 or wz < bl.z - .5) then
-       bl.fired = false
+    local wz = mz(pl.bl.x, pl.bl.y)
+    if (wz < 13.1 or wz < pl.bl.z - .5) then
+       pl.bl.fired = false
     else
-       local dt = pl.d - atan2(bl.x - pl.x, bl.y - pl.y)
+       local dt = pl.d - atan2(pl.bl.x - pl.x, pl.bl.y - pl.y)
        if (abs(dt) < 0.3) then
-	  local r = 10 / sqrt((bl.x - pl.x)^2 + (bl.y - pl.y)^2)
+	  local r = 10 / sqrt((pl.bl.x - pl.x)^2 + (pl.bl.y - pl.y)^2)
 	  local dx = 90 * sin(dt)
 	  circfill(64-dx,64,r,10)
 	  circ(64-dx,64,r,1)
@@ -247,43 +267,51 @@ function draw_3d()
  end
 
  -- draw enemy
- local dt = pl.d - atan2(en.x - pl.x, en.y - pl.y)
- if (abs(dt) < 0.3) then
-    local r = 32 / sqrt((en.x - pl.x)^2 + (en.y - pl.y)^2)
-    local dx = 90 * sin(dt)
-    circfill(64-dx,64,r,2)
-    circ(64-dx,64,r,14)
-    circfill(64-dx-r/3.5,64-r/3.5,r/7,0)
-    circfill(64-dx-r/3.5,64-r/4.6,r/6,0)
-    circfill(64-dx-r/3.5,64-r/6,r/7,0)
+ cnt = 0
+ for en in all(ens) do
+    cnt += 1
+    local dt = pl.d - atan2(en.x - pl.x, en.y - pl.y)
+    if (abs(dt) < 0.3) then
+       local r = 32 / sqrt((en.x - pl.x)^2 + (en.y - pl.y)^2)
+       local dx = 90 * sin(dt)
+       -- contour --
+       circfill(64-dx,64,r,en.cl[1])
+       circ(64-dx,64,r,en.cl[0])
 
-    circfill(64-dx+r/3.5,64-r/3.5,r/7,0)
-    circfill(64-dx+r/3.5,64-r/4.6,r/6,0)
-    circfill(64-dx+r/3.5,64-r/6,r/7,0)
+       -- eyes
+       circfill(64-dx-r/3.5,64-r/3.5,r/7,en.cl[0])
+       circfill(64-dx-r/3.5,64-r/4.6,r/6,en.cl[0])
+       circfill(64-dx-r/3.5,64-r/6,r/7,en.cl[0])
 
-    if (en.l == 3) then       -- happy
-       local x, y, r = 64-dx, 64-r*0.1, r/1.3
-       for angle = 210, 330.0 do
-	  local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	  pset( ptx, pty,0 )
+       circfill(64-dx+r/3.5,64-r/3.5,r/7,en.cl[0])
+       circfill(64-dx+r/3.5,64-r/4.6,r/6,en.cl[0])
+       circfill(64-dx+r/3.5,64-r/6,r/7,en.cl[0])
+
+       -- mouth
+       if (en.l == 3) then       -- happy
+	  local x, y, r = 64-dx, 64-r*0.1, r/1.3
+	  for angle = 210, 330.0 do
+	     local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
+	     pset( ptx, pty,en.cl[0])
+	  end
        end
-    end
-    if (flr(en.l) == 2) then       -- neutral
-       line(64-dx-r/2,64+r/3,64-dx+r/2,64+r/3)
-    end
-    if (flr(en.l) == 1) then       -- unhappy
-       local x, y, r = 64-dx, 64+r, r/1.3
-       for angle = 30, 150.0 do
-	  local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	  pset( ptx, pty,0 )
+       if (flr(en.l) == 2) then       -- neutral
+	  line(64-dx-r/2,64+r/3,64-dx+r/2,64+r/3,en.cl[0])
+       end
+       if (flr(en.l) == 1) then       -- unhappy
+	  local x, y, r = 64-dx, 64+r, r/1.3
+	  for angle = 30, 150.0 do
+	     local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
+	     pset( ptx, pty,en.cl[0])
+	  end
        end
     end
  end
 
 
 -- cursor(0,0) color(7)
--- print(pl.x)
--- print(pl.y)
+ print(pl.x)
+ print(pl.y)
 -- print(stat(1))
 end
 
