@@ -76,6 +76,9 @@ function hit(sh, ta)
    end
    if (ta.l < 1) then
       sh.s += 1
+      if (sh.s == ptowin) then
+	 gameover = sh.id
+      end
       init_smiley(ta, ta.id, ta.s)
    end
    return ta
@@ -136,6 +139,9 @@ end
 -- pico-8 structural functions
 ----------------------------------------
 function _init()
+   -- global settings
+   gameover = false
+   ptowin = 3
    -- ai settings (mainly probabilities)
    aggressivity = .1
    state = ""
@@ -248,7 +254,6 @@ function draw_3d()
  v.y0 = sin(pl.d+0.1)
  v.x1 = cos(pl.d-0.1)
  v.y1 = sin(pl.d-0.1)
-
 
  for sx=0,127 do
 
@@ -370,25 +375,31 @@ end
 
 
 function _draw()
- cls()
- -- to do: sky? stars?
- rectfill(0,0,127,127,12)
- draw_3d()
- -- target
- line(64-2, 64,   64-1, 64,   0)
- line(64,   64-2, 64,   64-1, 0)
- line(64+2, 64,   64+1, 64,   0)
- line(64,   64+2, 64,   64+1, 0)
- if (false) then
---  mapdraw(0,0,0,0,32,32)
---  pset(pl.x*8,pl.y*8,12)
---  pset(pl.x*8+cos(pl.d)*2,pl.y*8+sin(pl.d)*2,13)
---  pset(en.x*8,en.y*8,3)
-
-  mapdraw(pl.x-8,pl.y-8,0,0,24,24)
-  pset(64,64,12)
-  pset(64+cos(pl.d)*2,64+sin(pl.d)*2,13)
- end
+   cls()
+   -- to do: sky? stars?
+   rectfill(0,0,127,127,12)
+   if (gameover == false) then
+      draw_3d()
+      -- target
+      line(64-2, 64,   64-1, 64,   0)
+      line(64,   64-2, 64,   64-1, 0)
+      line(64+2, 64,   64+1, 64,   0)
+      line(64,   64+2, 64,   64+1, 0)
+   else
+      cursor(24,24) color(1)
+      print("GAME OVER")
+      print("PLAYER "..gameover.." WON!")
+   end
+   if (false) then
+      --  mapdraw(0,0,0,0,32,32)
+      --  pset(pl.x*8,pl.y*8,12)
+      --  pset(pl.x*8+cos(pl.d)*2,pl.y*8+sin(pl.d)*2,13)
+      --  pset(en.x*8,en.y*8,3)
+      
+      mapdraw(pl.x-8,pl.y-8,0,0,24,24)
+      pset(64,64,12)
+      pset(64+cos(pl.d)*2,64+sin(pl.d)*2,13)
+   end
 end
 
 
