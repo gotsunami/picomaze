@@ -20,10 +20,10 @@ end
 -- functions for all smileys/players
 ----------------------------------------
 -- init a smiley
-function init_smiley(sm, cnt)
+function init_smiley(sm, id, s)
    -- init id and colors
-   sm.id = cnt
-   sm.cl = {cnt, 0}
+   sm.id = id
+   sm.cl = {id, 0}
    -- init position
    sm.x = 1+flr(rnd(29)) sm.y = 1+flr(rnd(29))
    sm.z = 12
@@ -34,7 +34,7 @@ function init_smiley(sm, cnt)
    sm.dt = 0.1
    -- init life and score
    sm.l = 3
-   sm.s = 0
+   sm.s = s
    -- init bullet
    sm.bl={}
    sm.bl.x = sm.x sm.bl.y = sm.y
@@ -70,7 +70,7 @@ function hit(sh, ta)
    ta.l = flr(ta.l - 1)
    if (ta.l < 1) then
       sh.s += 1
-      init_smiley(ta, ta.id)
+      init_smiley(ta, ta.id, ta.s)
    end
    return ta
 end
@@ -93,9 +93,9 @@ function bullet(sm)
       sm.bl.x=sm.bl.x+cos(sm.bl.d)*0.55
       sm.bl.y=sm.bl.y+sin(sm.bl.d)*0.55
       -- hit an enemy?
-      for en in all(ens) do
+      for en in all(pls) do
 	 if (sqrt((sm.bl.x - en.x)^2 + (sm.bl.y - en.y)^2) < 0.25) then
-	    hit(pl, en)
+	    hit(sm, en)
 	    sm.bl.fired = false
 	    break
 	 end
@@ -128,15 +128,13 @@ end
 ----------------------------------------
 function _init()
  state = ""
- pl = {}
- init_smiley(pl, 1)
- 
- ens = {}
- for cnt in all({2, 3, 4, 5, 6}) do
+ pls = {}
+ for cnt in all({1, 2, 3, 4, 5, 6}) do
     en = {}
-    init_smiley(en, cnt)
-    add(ens, en)
+    init_smiley(en, cnt, 0)
+    add(pls, en)
  end
+ pl = pls[1]
 end
 
 function _update()
@@ -156,9 +154,11 @@ function _update()
    move(pl, m)
    bullet(pl)
 
-   for en in all(ens) do
+   for en in all(pls) do
       -- move --
-      AI_move(en)
+      if (en.id !=1) then
+	 AI_move(en)
+      end
       bullet(en)
       -- life restore --
       en.l = min(en.l + 0.005, 3)
@@ -334,13 +334,14 @@ function draw_3d()
  -- draw own bullet
  cursor(0,0) print(state)
  state = "killed "..pl.s
- draw_bullet(pl)
 
- -- draw enemies and their bullets
+ -- draw enemies and bullets
  cursor(0,20)
- for en in all(ens) do
-    print(en.l)
-    draw_smiley(en)
+ for en in all(pls) do
+    print(en.id.." "..en.s)
+    if (en.id != 1) then
+       draw_smiley(en)
+    end
     draw_bullet(en)
  end
 
