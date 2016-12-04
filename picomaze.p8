@@ -41,6 +41,7 @@ function init_smiley(sm, id, s)
    sm.bl.d = sm.d
    sm.bl.z = sm.z
    sm.bl.fired=false
+   sm.bl.reload=0
 end
 
 -- move a smiley (sm) according to its speed (dv)
@@ -86,17 +87,19 @@ end
 
 -- fire a bullet if not already fired
 function fire_bullet(sm)
-   if (sm.bl.fired==false) then
+   if (sm.bl.fired==false and sm.bl.reload <= 0) then
       sm.bl.d = sm.d
       sm.bl.x = sm.x
       sm.bl.y = sm.y
       sm.bl.z = sm.z
       sm.bl.fired = true
+      sm.bl.reload = 10
    end
 end
 
 -- move bullet
 function bullet(sm)
+   sm.bl.reload -= .1
    if (sm.bl.fired==true) then
       -- new bullet position --
       sm.bl.x=sm.bl.x+cos(sm.bl.d)*0.55
@@ -358,7 +361,7 @@ function draw_3d()
 
  -- draw own bullet
  cursor(0,0) print(state)
- state = "killed "..pl.s.." - status "..flr(pl.l)
+ state = "killed "..pl.s.." - status "..flr(pl.l).." "..pl.bl.reload
 
  -- draw enemies and bullets
  cursor(0,20)
