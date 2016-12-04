@@ -103,7 +103,8 @@ function bullet(sm)
       sm.bl.y=sm.bl.y+sin(sm.bl.d)*0.55
       -- hit an enemy?
       for en in all(pls) do
-	 if (sqrt((sm.bl.x - en.x)^2 + (sm.bl.y - en.y)^2) < 0.25) then
+	 if (sqrt((sm.bl.x - en.x)^2 + (sm.bl.y - en.y)^2) < 0.25 and
+	     abs(sm.bl.z - en.z) < 0.4) then
 	    hit(sm, en)
 	    sm.bl.fired = false
 	    break
@@ -192,42 +193,44 @@ end
 ----------------------------------------
 -- draw a smiley
 function draw_smiley(sm)
-    local dt = pl.d - atan2(sm.x - pl.x, sm.y - pl.y)
-    if (abs(dt) < 0.3) then
-       local r = 32 / sqrt((sm.x - pl.x)^2 + (sm.y - pl.y)^2)
-       local dx = 90 * sin(dt)
-       -- contour --
-       circfill(64-dx,64,r,sm.cl[1])
-       circ(64-dx,64,r,sm.cl[0])
-
-       -- eyes
-       circfill(64-dx-r/3.5,64-r/3.5,r/7,sm.cl[0])
-       circfill(64-dx-r/3.5,64-r/4.6,r/6,sm.cl[0])
-       circfill(64-dx-r/3.5,64-r/6,r/7,sm.cl[0])
-
-       circfill(64-dx+r/3.5,64-r/3.5,r/7,sm.cl[0])
-       circfill(64-dx+r/3.5,64-r/4.6,r/6,sm.cl[0])
-       circfill(64-dx+r/3.5,64-r/6,r/7,sm.cl[0])
-
-       -- mouth
-       if (sm.l == 3) then       -- happy
-	  local x, y, r = 64-dx, 64-r*0.1, r/1.3
-	  for angle = 210, 330.0 do
-	     local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	     pset( ptx, pty,sm.cl[0])
-	  end
-       end
-       if (flr(sm.l) == 2) then       -- neutral
-	  line(64-dx-r/2,64+r/3,64-dx+r/2,64+r/3,sm.cl[0])
-       end
-       if (flr(sm.l) == 1) then       -- unhappy
-	  local x, y, r = 64-dx, 64+r, r/1.3
-	  for angle = 30, 150.0 do
-	     local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	     pset( ptx, pty,sm.cl[0])
-	  end
-       end
-    end
+   local dt = pl.d - atan2(sm.x - pl.x, sm.y - pl.y)
+   if (abs(dt) < 0.3) then
+      local r = sqrt((sm.x - pl.x)^2 + (sm.y - pl.y)^2)
+      local cx = 64 - 90 * sin(dt)
+      local cy = 64 - 90 * (pl.z - sm.z) / r
+      r = 32 / r
+      -- contour --
+      circfill(cx,cy,r,sm.cl[1])
+      circ(cx,cy,r,sm.cl[0])
+      
+      -- eyes
+      circfill(cx-r/3.5,cy-r/3.5,r/7,sm.cl[0])
+      circfill(cx-r/3.5,cy-r/4.6,r/6,sm.cl[0])
+      circfill(cx-r/3.5,cy-r/6,r/7,sm.cl[0])
+      
+      circfill(cx+r/3.5,cy-r/3.5,r/7,sm.cl[0])
+      circfill(cx+r/3.5,cy-r/4.6,r/6,sm.cl[0])
+      circfill(cx+r/3.5,cy-r/6,r/7,sm.cl[0])
+      
+      -- mouth
+      if (sm.l == 3) then       -- happy
+	 local x, y, r = cx, cy-r*0.1, r/1.3
+	 for angle = 210, 330.0 do
+	    local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
+	    pset( ptx, pty,sm.cl[0])
+	 end
+      end
+      if (flr(sm.l) == 2) then       -- neutral
+	 line(cx-r/2,cy+r/3,cx+r/2,cy+r/3,sm.cl[0])
+      end
+      if (flr(sm.l) == 1) then       -- unhappy
+	 local x, y, r = cx, cy+r, r/1.3
+	 for angle = 30, 150.0 do
+	    local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
+	    pset( ptx, pty,sm.cl[0])
+	 end
+      end
+   end
 end
 
 -- draw a bullet
@@ -236,10 +239,12 @@ function draw_bullet(sm)
    if (bl.fired == true) then
       local dt = pl.d - atan2(bl.x - pl.x, bl.y - pl.y)
       if (abs(dt) < 0.3) then
-	 local r = 10 / sqrt((bl.x - pl.x)^2 + (bl.y - pl.y)^2)
-	 local dx = 90 * sin(dt)
-	 circfill(64-dx,64,r,sm.cl[1])
-	 circ(64-dx,64,r,sm.cl[0])
+	 local r = sqrt((bl.x - pl.x)^2 + (bl.y - pl.y)^2)
+	 local cx = 64 - 90 * sin(dt)
+	 local cy = 64 - 90 * (pl.z - bl.z) / r
+	 r = 10 / r
+	 circfill(cx,cy,r,sm.cl[1])
+	 circ(cx,cy,r,sm.cl[0])
       end
    end
 end
