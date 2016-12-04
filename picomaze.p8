@@ -253,21 +253,26 @@ function draw_3d()
     local dx = 90 * sin(dt)
     circfill(64-dx,64,r,2)
     circ(64-dx,64,r,14)
-    circfill(64-dx-r/3.5,64-r/3.5,r/6,0)
-    circfill(64-dx+r/3.5,64-r/3.5,r/6,0)
+    circfill(64-dx-r/3.5,64-r/3.5,r/7,0)
+    circfill(64-dx-r/3.5,64-r/4.6,r/6,0)
+    circfill(64-dx-r/3.5,64-r/6,r/7,0)
+
+    circfill(64-dx+r/3.5,64-r/3.5,r/7,0)
+    circfill(64-dx+r/3.5,64-r/4.6,r/6,0)
+    circfill(64-dx+r/3.5,64-r/6,r/7,0)
 
     if (en.l == 3) then       -- happy
-       local x, y, r = 64-dx, 64+r*0.1, r/2.5
+       local x, y, r = 64-dx, 64-r*0.1, r/1.3
        for angle = 210, 330.0 do
 	  local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
 	  pset( ptx, pty,0 )
        end
     end
     if (flr(en.l) == 2) then       -- neutral
-       line(64-dx-r/3,64+r/3,64-dx+r/3,64+r/3)
+       line(64-dx-r/2,64+r/3,64-dx+r/2,64+r/3)
     end
     if (flr(en.l) == 1) then       -- unhappy
-       local x, y, r = 64-dx, 64+r*0.7, r/2.5
+       local x, y, r = 64-dx, 64+r, r/1.3
        for angle = 30, 150.0 do
 	  local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
 	  pset( ptx, pty,0 )
