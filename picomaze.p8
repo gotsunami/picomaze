@@ -240,11 +240,12 @@ function draw_3d()
  end
 
  -- draw enemy
- if (move(en, 0.2) == false) then
+ if (move(en, 0.0) == false) then
     en.d += en.dt
  else
     en.dt = .01 * sgn(rnd(1)-.5)
  end
+
  local dt = pl.d - atan2(en.x - pl.x, en.y - pl.y)
  if (abs(dt) < 0.3) then
     local r = 32 / sqrt((en.x - pl.x)^2 + (en.y - pl.y)^2)
@@ -253,7 +254,24 @@ function draw_3d()
     circ(64-dx,64,r,14)
     circfill(64-dx-r/3.5,64-r/3.5,r/6,0)
     circfill(64-dx+r/3.5,64-r/3.5,r/6,0)
-    line(64-dx-r/3,64+r/3,64-dx+r/3,64+r/3)
+
+    if (en.l == 3) then       -- happy
+       local x, y, r = 64-dx, 64+r*0.1, r/2.5
+       for angle = 210, 330.0 do
+	  local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
+	  pset( ptx, pty,0 )
+       end
+    end
+    if (en.l == 2) then       -- neutral
+       line(64-dx-r/3,64+r/3,64-dx+r/3,64+r/3)
+    end
+    if (en.l == 1) then       -- unhappy
+       local x, y, r = 64-dx, 64+r*0.7, r/2.5
+       for angle = 30, 150.0 do
+	  local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
+	  pset( ptx, pty,0 )
+       end
+    end
  end
 
 
@@ -276,14 +294,14 @@ function _draw()
  line(64-1,64,64+1,64,7)
  line(64,64-1,64,64+1,7)
  if (false) then
-  mapdraw(0,0,0,0,32,32)
-  pset(pl.x*8,pl.y*8,12)
-  pset(pl.x*8+cos(pl.d)*2,pl.y*8+sin(pl.d)*2,13)
-  pset(en.x*8,en.y*8,3)
+--  mapdraw(0,0,0,0,32,32)
+--  pset(pl.x*8,pl.y*8,12)
+--  pset(pl.x*8+cos(pl.d)*2,pl.y*8+sin(pl.d)*2,13)
+--  pset(en.x*8,en.y*8,3)
 
---  mapdraw(pl.x-8,pl.y-8,0,0,24,24)
---  pset(64,64,12)
---  pset(64+cos(pl.d)*2,64+sin(pl.d)*2,13)
+  mapdraw(pl.x-8,pl.y-8,0,0,24,24)
+  pset(64,64,12)
+  pset(64+cos(pl.d)*2,64+sin(pl.d)*2,13)
  end
 end
 
