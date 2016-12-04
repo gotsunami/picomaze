@@ -5,16 +5,12 @@ __lua__
 ----------------------------------------
 -- helpers for the map
 ----------------------------------------
--- get a position of the map
-function mc(x,y)
-   return mget(x,y)
-end
-
 -- get the altitude of a point of the map
 function mz(x,y)
    local col=mget(x,y)
    return 16-col*0.2
 end
+----------------------------------------
 
 ----------------------------------------
 -- functions for all smileys/players
@@ -44,6 +40,7 @@ function init_smiley(sm, id, s)
    sm.bl.reload=0
 end
 
+----------------------------------------
 -- move a smiley (sm) according to its speed (dv)
 function move(sm, dv)
    if (sm.z >= mz(sm.x,sm.y) and sm.dz >=0) then
@@ -66,6 +63,7 @@ function move(sm, dv)
    return false
 end
 
+----------------------------------------
 -- add a hit: sh (shooter) > ta (target)
 function hit(sh, ta)
    ta.l = flr(ta.l - 1)
@@ -85,7 +83,9 @@ function hit(sh, ta)
    return ta
 end
 
+----------------------------------------
 -- fire a bullet if not already fired
+-- and if smiley is reloaded
 function fire_bullet(sm)
    if (sm.bl.fired==false and sm.bl.reload <= 0) then
       sm.bl.d = sm.d
@@ -93,11 +93,12 @@ function fire_bullet(sm)
       sm.bl.y = sm.y
       sm.bl.z = sm.z
       sm.bl.fired = true
-      sm.bl.reload = 10
+      sm.bl.reload = 5
    end
 end
 
--- move bullet
+----------------------------------------
+-- move bullet and handle collision
 function bullet(sm)
    sm.bl.reload -= .1
    if (sm.bl.fired==true) then
@@ -124,7 +125,7 @@ function bullet(sm)
 end
 
 ----------------------------------------
--- functions for ai smileys/players
+-- functions for AI smileys/players
 -- call ai_move(pl) to test algorithm
 ----------------------------------------
 function ai_move(sm)
@@ -137,58 +138,6 @@ function ai_move(sm)
    if (rnd(1) < aggressivity) then
       fire_bullet(sm)
    end
-end
-
-----------------------------------------
--- pico-8 structural functions
-----------------------------------------
-function _init()
-   -- global settings
-   gameover = false
-   ptowin = 3
-   -- ai settings (mainly probabilities)
-   aggressivity = .1
-   state = ""
-
-   -- create array of smiley. id = 1 is player
-   player_id = 10
-   pls = {}
-   for cnt in all({10, 1, 2, 5, 6, 8, 9}) do
-      en = {}
-      init_smiley(en, cnt, 0)
-      add(pls, en)
-   end
-   pl = pls[1]
-   sfx(1)
-end
-
-function _update()
-   -- player rotation --
-   if (btn(0)) then pl.d=(pl.d+pl.dd)%1 end
-   if (btn(1)) then pl.d=(pl.d+1-pl.dd)%1 end
-
-   -- player move --
-   m = 0
-   if (btn(2)) then m = pl.dv else if (btn(3)) then m = -pl.dv end end
-
-   -- player fire --
-   if (btn(4)) then 
-      fire_bullet(pl)
-   end
-
-   move(pl, m)
-   bullet(pl)
-
-   for en in all(pls) do
-      -- move --
-      if (en.id != player_id) then
-	 ai_move(en)
-      end
-      bullet(en)
-      -- life restore --
-      en.l = min(en.l + 0.005, 3)
-   end
-
 end
 
 ----------------------------------------
@@ -252,6 +201,7 @@ function draw_bullet(sm)
    end
 end
 
+-- draw the 3D map, the smileys, and the bullets
 function draw_3d()
  local celz0
  local col
@@ -302,59 +252,58 @@ function draw_3d()
   skips=0
 
   while (skip) do
-
-   skips = skips + 1
-   if (dist_x < dist_y) then
-    ix=ix+dir_x
-    last_dir = 0
-    dist_y = dist_y - dist_x
-    tdist = tdist + dist_x
-    dist_x = skip_x
-   else
-    iy=iy+dir_y
-    last_dir = 1
-    dist_x = dist_x - dist_y
-    tdist = tdist + dist_y
-    dist_y = skip_y
-   end
-
-   -- prev cel properties
-   col0=col
-   celz0=celz
-   -- new cel properties
-   col=mget(ix,iy)
-   celz=16-col*0.2
-
-
-   if (col==15) then skip=false end
-
-   --discard close hits
-   if (tdist > .1) then
-   -- screen space
-
-   local sy1 = celz0-z
-   sy1 = (sy1 * 64)/tdist
-   sy1 = sy1 + 64 -- horizon 
-
-   -- draw ground to new point
-   if (sy1 < sy) then
-    gcol=3
-    if(celz0 < 16) then gcol=11 end
-    line(sx,sy1-1,sx,sy,gcol)
-    sy=sy1
-   end
-
-   -- draw wall if higher   
-   if (celz < celz0) then
-    local sy1 = celz-z
-    sy1 = (sy1 * 64)/tdist
-    sy1 = sy1 + 64 -- horizon 
-    if (sy1 < sy) then
-     line(sx,sy1-1,sx,sy, last_dir*1+6)
-     sy=sy1
-    end
-   end
-  end   
+     skips = skips + 1
+     if (dist_x < dist_y) then
+	ix=ix+dir_x
+	last_dir = 0
+	dist_y = dist_y - dist_x
+	tdist = tdist + dist_x
+	dist_x = skip_x
+     else
+	iy=iy+dir_y
+	last_dir = 1
+	dist_x = dist_x - dist_y
+	tdist = tdist + dist_y
+	dist_y = skip_y
+     end
+     
+     -- prev cel properties
+     col0=col
+     celz0=celz
+     -- new cel properties
+     col=mget(ix,iy)
+     celz=16-col*0.2
+     
+     
+     if (col==15) then skip=false end
+     
+     --discard close hits
+     if (tdist > .1) then
+	-- screen space
+	
+	local sy1 = celz0-z
+	sy1 = (sy1 * 64)/tdist
+	sy1 = sy1 + 64 -- horizon 
+	
+	-- draw ground to new point
+	if (sy1 < sy) then
+	   gcol=3
+	   if(celz0 < 16) then gcol=11 end
+	   line(sx,sy1-1,sx,sy,gcol)
+	   sy=sy1
+	end
+	
+	-- draw wall if higher   
+	if (celz < celz0) then
+	   local sy1 = celz-z
+	   sy1 = (sy1 * 64)/tdist
+	   sy1 = sy1 + 64 -- horizon 
+	   if (sy1 < sy) then
+	      line(sx,sy1-1,sx,sy, last_dir*1+6)
+	      sy=sy1
+	   end
+	end
+     end   
   end -- skipping
 
  end -- sx
@@ -372,16 +321,11 @@ function draw_3d()
     end
     draw_bullet(en)
  end
-
--- cursor(0,0) color(7)
--- print(pl.x)
--- print(pl.y)
--- print(stat(1))
 end
 
-
-
-
+----------------------------------------
+-- pico-8 structural functions
+----------------------------------------
 function _draw()
    cls()
    -- to do: sky? stars?
@@ -394,22 +338,80 @@ function _draw()
       line(64+2, 64,   64+1, 64,   0)
       line(64,   64+2, 64,   64+1, 0)
    else
-      cursor(24,24) color(1)
+      cursor(45,5) color(0)
       print("GAME OVER")
-      print("PLAYER "..gameover.." WON!")
+      if (gameover != player_id) then
+	 cursor(38,15) color(0)
+	 print("PLAYER "..gameover.." WON!")
+      else
+	 cursor(48,15) color(0)
+	 print("YOU WON!")
+      end
+      pl.x = 10
+      pl.y = 10
+      pl.d = 0.25
+      wn = {}
+      init_smiley(wn, gameover, ptowin)
+      wn.x = 10
+      wn.y = 9
+      wn.z = pl.z
+      draw_smiley(wn)
    end
    if (false) then
-      --  mapdraw(0,0,0,0,32,32)
-      --  pset(pl.x*8,pl.y*8,12)
-      --  pset(pl.x*8+cos(pl.d)*2,pl.y*8+sin(pl.d)*2,13)
-      --  pset(en.x*8,en.y*8,3)
-      
       mapdraw(pl.x-8,pl.y-8,0,0,24,24)
       pset(64,64,12)
       pset(64+cos(pl.d)*2,64+sin(pl.d)*2,13)
    end
 end
 
+----------------------------------------
+function _update()
+   -- player rotation --
+   if (btn(0)) then pl.d=(pl.d+pl.dd)%1 end
+   if (btn(1)) then pl.d=(pl.d+1-pl.dd)%1 end
+
+   -- player move --
+   m = 0
+   if (btn(2)) then m = pl.dv else if (btn(3)) then m = -pl.dv end end
+
+   -- player fire --
+   if (btn(4)) then 
+      fire_bullet(pl)
+   end
+
+   -- update smileys and bullets
+   for en in all(pls) do
+      -- move --
+      if (en.id != player_id) then
+	 ai_move(en)
+      else
+	 move(pl, m)
+      end
+      bullet(en)
+      -- life restore --
+      en.l = min(en.l + 0.005, 3)
+   end
+end
+
+function _init()
+   -- global settings
+   gameover = false
+   ptowin = 3
+   state = ""
+   -- ai settings (mainly probabilities)
+   aggressivity = .1
+
+   -- create array of smiley. id = 1 is player
+   player_id = 10
+   pls = {}
+   for cnt in all({10, 1, 2, 5, 6, 8, 9}) do
+      en = {}
+      init_smiley(en, cnt, 0)
+      add(pls, en)
+   end
+   pl = pls[1]
+   sfx(1)
+end
 
 
 
