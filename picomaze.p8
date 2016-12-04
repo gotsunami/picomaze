@@ -59,7 +59,7 @@ function move(pl,m)
 end
 
 function hit(en)
-   en.l -= 1
+   en.l = flr(en.l - 1)
    if (en.l == 0) then
       score += 1
       en.l = 3
@@ -99,6 +99,13 @@ function _update()
   -- pl.dz=-0.15
   --end
  end
+
+ if (move(en, 0.2) == false) then
+    en.d += en.dt
+ else
+    en.dt = .01 * sgn(rnd(1)-.5)
+ end
+ en.l = min(en.l + 0.005, 3)
 
 end
 
@@ -216,7 +223,7 @@ function draw_3d()
 
  -- draw bullet
  cursor(0,0) print(state)
- state = "killed "..score.." - injured "..(3-en.l)
+ state = "killed "..score
  if (bl.fired==true) then
     state = "FIRED"
     bl.x=bl.x+cos(bl.d)*0.55
@@ -240,12 +247,6 @@ function draw_3d()
  end
 
  -- draw enemy
- if (move(en, 0.0) == false) then
-    en.d += en.dt
- else
-    en.dt = .01 * sgn(rnd(1)-.5)
- end
-
  local dt = pl.d - atan2(en.x - pl.x, en.y - pl.y)
  if (abs(dt) < 0.3) then
     local r = 32 / sqrt((en.x - pl.x)^2 + (en.y - pl.y)^2)
@@ -262,10 +263,10 @@ function draw_3d()
 	  pset( ptx, pty,0 )
        end
     end
-    if (en.l == 2) then       -- neutral
+    if (flr(en.l) == 2) then       -- neutral
        line(64-dx-r/3,64+r/3,64-dx+r/3,64+r/3)
     end
-    if (en.l == 1) then       -- unhappy
+    if (flr(en.l) == 1) then       -- unhappy
        local x, y, r = 64-dx, 64+r*0.7, r/2.5
        for angle = 30, 150.0 do
 	  local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
