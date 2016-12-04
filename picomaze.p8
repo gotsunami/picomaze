@@ -20,8 +20,7 @@ end
 -- functions for all smileys/players
 ----------------------------------------
 -- init a smiley
-function init_smiley(cnt)
-   sm={}
+function init_smiley(sm, cnt)
    -- init id and colors
    sm.id = cnt
    sm.cl = {cnt, 0}
@@ -42,7 +41,6 @@ function init_smiley(cnt)
    sm.bl.d = sm.d
    sm.bl.z = sm.z
    sm.bl.fired=false
-   return sm
 end
 
 -- move a smiley (sm) according to its speed (dv)
@@ -70,9 +68,9 @@ end
 -- add a hit: sh (shooter) > ta (target)
 function hit(sh, ta)
    ta.l = flr(ta.l - 1)
-   if (ta.l == 0) then
+   if (ta.l < 1) then
       sh.s += 1
-      return init_smiley(ta.id)
+      init_smiley(ta, ta.id)
    end
    return ta
 end
@@ -94,11 +92,14 @@ end
 ----------------------------------------
 function _init()
  state = ""
- pl = init_smiley(1)
+ pl = {}
+ init_smiley(pl, 1)
  
  ens = {}
  for cnt in all({2, 3, 4, 5, 6}) do
-    add(ens, init_smiley(cnt))
+    en = {}
+    init_smiley(en, cnt)
+    add(ens, en)
  end
 end
 
@@ -245,17 +246,26 @@ function draw_3d()
  cursor(0,0) print(state)
  state = "killed "..pl.s
  if (pl.bl.fired==true) then
-    state = "FIRED"
+    -- new bullet position --
     pl.bl.x=pl.bl.x+cos(pl.bl.d)*0.55
     pl.bl.y=pl.bl.y+sin(pl.bl.d)*0.55
-    if (sqrt((pl.bl.x - en.x)^2 + (pl.bl.y - en.y)^2) < 0.25) then
-       en = hit(pl, en)
-       pl.bl.fired = false
+    -- hit an enemy?
+    for en in all(ens) do
+       if (sqrt((pl.bl.x - en.x)^2 + (pl.bl.y - en.y)^2) < 0.25) then
+	  hit(pl, en)
+	  pl.bl.fired = false
+	  break
+       end
     end
-    local wz = mz(pl.bl.x, pl.bl.y)
-    if (wz < 13.1 or wz < pl.bl.z - .5) then
-       pl.bl.fired = false
-    else
+    -- else hit a wall?
+    if (pl.bl.fired == true) then
+       local wz = mz(pl.bl.x, pl.bl.y)
+       if (wz < 13.1 or wz < pl.bl.z - .5) then
+	  pl.bl.fired = false
+       end
+    end
+    -- keep going
+    if (pl.bl.fired == true) then
        local dt = pl.d - atan2(pl.bl.x - pl.x, pl.bl.y - pl.y)
        if (abs(dt) < 0.3) then
 	  local r = 10 / sqrt((pl.bl.x - pl.x)^2 + (pl.bl.y - pl.y)^2)
@@ -268,7 +278,9 @@ function draw_3d()
 
  -- draw enemy
  cnt = 0
+ cursor(0,20)
  for en in all(ens) do
+    print(en.l)
     cnt += 1
     local dt = pl.d - atan2(en.x - pl.x, en.y - pl.y)
     if (abs(dt) < 0.3) then
@@ -310,8 +322,8 @@ function draw_3d()
 
 
 -- cursor(0,0) color(7)
- print(pl.x)
- print(pl.y)
+-- print(pl.x)
+-- print(pl.y)
 -- print(stat(1))
 end
 
@@ -323,10 +335,11 @@ function _draw()
  -- to do: sky? stars?
  rectfill(0,0,127,127,12)
  draw_3d()
- line(64-2,64,64+2,64,0)
- line(64,64-2,64,64+2,0)
- line(64-1,64,64+1,64,7)
- line(64,64-1,64,64+1,7)
+ -- target
+ line(64-2, 64,   64-1, 64,   0)
+ line(64,   64-2, 64,   64-1, 0)
+ line(64+2, 64,   64+1, 64,   0)
+ line(64,   64+2, 64,   64+1, 0)
  if (false) then
 --  mapdraw(0,0,0,0,32,32)
 --  pset(pl.x*8,pl.y*8,12)
