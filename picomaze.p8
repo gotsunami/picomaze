@@ -75,6 +75,41 @@ function hit(sh, ta)
    return ta
 end
 
+-- fire a bullet if not already fired
+function fire_bullet(sm)
+   if (sm.bl.fired==false) then
+      sm.bl.d = sm.d
+      sm.bl.x = sm.x
+      sm.bl.y = sm.y
+      sm.bl.z = sm.z
+      sm.bl.fired = true
+   end
+end
+
+-- move bullet
+function bullet(sm)
+   if (sm.bl.fired==true) then
+      -- new bullet position --
+      sm.bl.x=sm.bl.x+cos(sm.bl.d)*0.55
+      sm.bl.y=sm.bl.y+sin(sm.bl.d)*0.55
+      -- hit an enemy?
+      for en in all(ens) do
+	 if (sqrt((sm.bl.x - en.x)^2 + (sm.bl.y - en.y)^2) < 0.25) then
+	    hit(pl, en)
+	    sm.bl.fired = false
+	    break
+	 end
+      end
+      -- else hit a wall?
+      if (sm.bl.fired == true) then
+	 local wz = mz(sm.bl.x, sm.bl.y)
+	 if (wz < 13.1 or wz < sm.bl.z - .5) then
+	    sm.bl.fired = false
+	 end
+      end
+   end
+end
+
 ----------------------------------------
 -- functions for AI smileys/players
 -- call AI_move(pl) to test algorithm
@@ -85,6 +120,7 @@ function AI_move(sm)
    else
       sm.dt = .01 * sgn(rnd(1)-.5)
    end
+   fire_bullet(sm)
 end
 
 ----------------------------------------
@@ -112,26 +148,79 @@ function _update()
    m = 0
    if (btn(2)) then m = 0.2 else if (btn(3)) then m = -0.2 end end
 
-   move(pl, m)
-
    -- player fire --
    if (btn(4)) then 
-      if (pl.bl.fired==false) then
-	 pl.bl.d = pl.d
-	 pl.bl.x = pl.x
-	 pl.bl.y = pl.y
-	 pl.bl.z = pl.z
-	 pl.bl.fired = true
-      end
+      fire_bullet(pl)
    end
+
+   move(pl, m)
+   bullet(pl)
 
    for en in all(ens) do
       -- move --
       AI_move(en)
+      bullet(en)
       -- life restore --
       en.l = min(en.l + 0.005, 3)
    end
 
+end
+
+----------------------------------------
+-- drawing functions
+----------------------------------------
+-- draw a smiley
+function draw_smiley(sm)
+    local dt = pl.d - atan2(sm.x - pl.x, sm.y - pl.y)
+    if (abs(dt) < 0.3) then
+       local r = 32 / sqrt((sm.x - pl.x)^2 + (sm.y - pl.y)^2)
+       local dx = 90 * sin(dt)
+       -- contour --
+       circfill(64-dx,64,r,sm.cl[1])
+       circ(64-dx,64,r,sm.cl[0])
+
+       -- eyes
+       circfill(64-dx-r/3.5,64-r/3.5,r/7,sm.cl[0])
+       circfill(64-dx-r/3.5,64-r/4.6,r/6,sm.cl[0])
+       circfill(64-dx-r/3.5,64-r/6,r/7,sm.cl[0])
+
+       circfill(64-dx+r/3.5,64-r/3.5,r/7,sm.cl[0])
+       circfill(64-dx+r/3.5,64-r/4.6,r/6,sm.cl[0])
+       circfill(64-dx+r/3.5,64-r/6,r/7,sm.cl[0])
+
+       -- mouth
+       if (sm.l == 3) then       -- happy
+	  local x, y, r = 64-dx, 64-r*0.1, r/1.3
+	  for angle = 210, 330.0 do
+	     local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
+	     pset( ptx, pty,sm.cl[0])
+	  end
+       end
+       if (flr(sm.l) == 2) then       -- neutral
+	  line(64-dx-r/2,64+r/3,64-dx+r/2,64+r/3,sm.cl[0])
+       end
+       if (flr(sm.l) == 1) then       -- unhappy
+	  local x, y, r = 64-dx, 64+r, r/1.3
+	  for angle = 30, 150.0 do
+	     local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
+	     pset( ptx, pty,sm.cl[0])
+	  end
+       end
+    end
+end
+
+-- draw a bullet
+function draw_bullet(sm)
+   local bl = sm.bl
+   if (bl.fired == true) then
+      local dt = pl.d - atan2(bl.x - pl.x, bl.y - pl.y)
+      if (abs(dt) < 0.3) then
+	 local r = 10 / sqrt((bl.x - pl.x)^2 + (bl.y - pl.y)^2)
+	 local dx = 90 * sin(dt)
+	 circfill(64-dx,64,r,sm.cl[1])
+	 circ(64-dx,64,r,sm.cl[0])
+      end
+   end
 end
 
 function draw_3d()
@@ -242,84 +331,18 @@ function draw_3d()
 
  end -- sx
 
- -- draw bullet
+ -- draw own bullet
  cursor(0,0) print(state)
  state = "killed "..pl.s
- if (pl.bl.fired==true) then
-    -- new bullet position --
-    pl.bl.x=pl.bl.x+cos(pl.bl.d)*0.55
-    pl.bl.y=pl.bl.y+sin(pl.bl.d)*0.55
-    -- hit an enemy?
-    for en in all(ens) do
-       if (sqrt((pl.bl.x - en.x)^2 + (pl.bl.y - en.y)^2) < 0.25) then
-	  hit(pl, en)
-	  pl.bl.fired = false
-	  break
-       end
-    end
-    -- else hit a wall?
-    if (pl.bl.fired == true) then
-       local wz = mz(pl.bl.x, pl.bl.y)
-       if (wz < 13.1 or wz < pl.bl.z - .5) then
-	  pl.bl.fired = false
-       end
-    end
-    -- keep going
-    if (pl.bl.fired == true) then
-       local dt = pl.d - atan2(pl.bl.x - pl.x, pl.bl.y - pl.y)
-       if (abs(dt) < 0.3) then
-	  local r = 10 / sqrt((pl.bl.x - pl.x)^2 + (pl.bl.y - pl.y)^2)
-	  local dx = 90 * sin(dt)
-	  circfill(64-dx,64,r,10)
-	  circ(64-dx,64,r,1)
-       end
-    end
- end
+ draw_bullet(pl)
 
- -- draw enemy
- cnt = 0
+ -- draw enemies and their bullets
  cursor(0,20)
  for en in all(ens) do
     print(en.l)
-    cnt += 1
-    local dt = pl.d - atan2(en.x - pl.x, en.y - pl.y)
-    if (abs(dt) < 0.3) then
-       local r = 32 / sqrt((en.x - pl.x)^2 + (en.y - pl.y)^2)
-       local dx = 90 * sin(dt)
-       -- contour --
-       circfill(64-dx,64,r,en.cl[1])
-       circ(64-dx,64,r,en.cl[0])
-
-       -- eyes
-       circfill(64-dx-r/3.5,64-r/3.5,r/7,en.cl[0])
-       circfill(64-dx-r/3.5,64-r/4.6,r/6,en.cl[0])
-       circfill(64-dx-r/3.5,64-r/6,r/7,en.cl[0])
-
-       circfill(64-dx+r/3.5,64-r/3.5,r/7,en.cl[0])
-       circfill(64-dx+r/3.5,64-r/4.6,r/6,en.cl[0])
-       circfill(64-dx+r/3.5,64-r/6,r/7,en.cl[0])
-
-       -- mouth
-       if (en.l == 3) then       -- happy
-	  local x, y, r = 64-dx, 64-r*0.1, r/1.3
-	  for angle = 210, 330.0 do
-	     local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	     pset( ptx, pty,en.cl[0])
-	  end
-       end
-       if (flr(en.l) == 2) then       -- neutral
-	  line(64-dx-r/2,64+r/3,64-dx+r/2,64+r/3,en.cl[0])
-       end
-       if (flr(en.l) == 1) then       -- unhappy
-	  local x, y, r = 64-dx, 64+r, r/1.3
-	  for angle = 30, 150.0 do
-	     local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	     pset( ptx, pty,en.cl[0])
-	  end
-       end
-    end
+    draw_smiley(en)
+    draw_bullet(en)
  end
-
 
 -- cursor(0,0) color(7)
 -- print(pl.x)
