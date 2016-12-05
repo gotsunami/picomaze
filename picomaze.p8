@@ -19,7 +19,7 @@ end
 function init_smiley(sm, id, s)
    -- init id and colors
    sm.id = id
-   sm.cl = {id, 0}
+   sm.cl = {id, id+1}
    -- init position
    sm.x = 1+flr(rnd(29)) sm.y = 1+flr(rnd(29))
    sm.z = 12
@@ -133,7 +133,13 @@ function ai_move(sm)
       sm.d += sm.dd
    else
       -- random change of rotation
-      sm.dd = .01 * sgn(rnd(1)-.5)
+      if (rnd(1) < .05) then
+	 sm.dd = .01 * sgn(rnd(1)-.5)
+      end
+      -- random change of direction
+      if (rnd(1) < .25) then
+	 sm.d += sm.dd
+      end
    end
    if (rnd(1) < aggressivity) then
       fire_bullet(sm)
@@ -146,40 +152,43 @@ end
 -- draw a smiley
 function draw_smiley(sm)
    local dt = pl.d - atan2(sm.x - pl.x, sm.y - pl.y)
+   local r = sqrt((sm.x - pl.x)^2 + (sm.y - pl.y)^2)
+   -- array to store distance of each smiley, knowing its two dedicated colours
+   sz[sm.id] = r
+   sz[sm.id+1] = r
    if (abs(dt) < 0.3) then
-      local r = sqrt((sm.x - pl.x)^2 + (sm.y - pl.y)^2)
       local cx = 64 - 90 * sin(dt)
       local cy = 64 - 90 * (pl.z - sm.z) / r
       r = 32 / r
       -- contour --
       circfill(cx,cy,r,sm.cl[1])
-      circ(cx,cy,r,sm.cl[0])
+      circ(cx,cy,r,sm.cl[2])
       
       -- eyes
-      circfill(cx-r/3.5,cy-r/3.5,r/7,sm.cl[0])
-      circfill(cx-r/3.5,cy-r/4.6,r/6,sm.cl[0])
-      circfill(cx-r/3.5,cy-r/6,r/7,sm.cl[0])
+      circfill(cx-r/3.5,cy-r/3.5,r/7,sm.cl[2])
+      circfill(cx-r/3.5,cy-r/4.6,r/6,sm.cl[2])
+      circfill(cx-r/3.5,cy-r/6,r/7,sm.cl[2])
       
-      circfill(cx+r/3.5,cy-r/3.5,r/7,sm.cl[0])
-      circfill(cx+r/3.5,cy-r/4.6,r/6,sm.cl[0])
-      circfill(cx+r/3.5,cy-r/6,r/7,sm.cl[0])
+      circfill(cx+r/3.5,cy-r/3.5,r/7,sm.cl[2])
+      circfill(cx+r/3.5,cy-r/4.6,r/6,sm.cl[2])
+      circfill(cx+r/3.5,cy-r/6,r/7,sm.cl[2])
       
       -- mouth
       if (sm.l == 3) then       -- happy
 	 local x, y, r = cx, cy-r*0.1, r/1.3
 	 for angle = 210, 330.0 do
 	    local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	    pset( ptx, pty,sm.cl[0])
+	    pset( ptx, pty,sm.cl[2])
 	 end
       end
       if (flr(sm.l) == 2) then       -- neutral
-	 line(cx-r/2,cy+r/3,cx+r/2,cy+r/3,sm.cl[0])
+	 line(cx-r/2,cy+r/3,cx+r/2,cy+r/3,sm.cl[2])
       end
       if (flr(sm.l) == 1) then       -- unhappy
 	 local x, y, r = cx, cy+r, r/1.3
 	 for angle = 30, 150.0 do
 	    local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	    pset( ptx, pty,sm.cl[0])
+	    pset( ptx, pty,sm.cl[2])
 	 end
       end
    end
@@ -196,13 +205,23 @@ function draw_bullet(sm)
 	 local cy = 64 - 90 * (pl.z - bl.z) / r
 	 r = 10 / r
 	 circfill(cx,cy,r,sm.cl[1])
-	 circ(cx,cy,r,sm.cl[0])
+	 circ(cx,cy,r,sm.cl[2])
       end
    end
 end
 
 -- draw the 3D map, the smileys, and the bullets
 function draw_3d()
+ -- draw enemies and bullets
+ cursor(0,10)
+ for en in all(pls) do
+    color(en.id+1) print("O "..en.s)
+    if (en.id != player_id) then       
+       draw_smiley(en)
+    end
+    draw_bullet(en)
+ end
+
  local celz0
  local col
  -- calculate view plane (line)
@@ -289,8 +308,15 @@ function draw_3d()
 	if (sy1 < sy) then
 	   gcol=3
 	   if(celz0 < 16) then gcol=11 end
-	   line(sx,sy1-1,sx,sy,gcol)
-	   sy=sy1
+	   while(sy > sy1) do
+	      tmp = pget(sx, sy)
+	      if (tmp == 12 or (sz[tmp] and tdist < sz[tmp])) then
+		 pset(sx,sy,gcol)
+	      end
+	      sy -= 1
+	   end
+-- 	   line(sx,sy1-1,sx,sy,gcol)
+-- 	   sy=sy1
 	end
 	
 	-- draw wall if higher   
@@ -299,8 +325,13 @@ function draw_3d()
 	   sy1 = (sy1 * 64)/tdist
 	   sy1 = sy1 + 64 -- horizon 
 	   if (sy1 < sy) then
-	      line(sx,sy1-1,sx,sy, last_dir*1+6)
-	      sy=sy1
+	      while(sy > sy1) do
+		 tmp = pget(sx, sy)
+		 if (tmp == 12 or (sz[tmp] and tdist < sz[tmp])) then
+		    pset(sx,sy,last_dir*1+6)
+		 end
+		 sy -= 1
+	      end
 	   end
 	end
      end   
@@ -308,19 +339,9 @@ function draw_3d()
 
  end -- sx
 
- -- draw own bullet
+ -- draw status
  cursor(0,0) print(state)
- state = "killed "..pl.s.." - status "..flr(pl.l).." "..pl.bl.reload
-
- -- draw enemies and bullets
- cursor(0,20)
- for en in all(pls) do
-    print(en.id.." "..en.s)
-    if (en.id != player_id) then
-       draw_smiley(en)
-    end
-    draw_bullet(en)
- end
+ state = "killed "..pl.s.." - status "..flr(pl.l)
 end
 
 ----------------------------------------
@@ -337,6 +358,11 @@ function _draw()
       line(64,   64-2, 64,   64-1, 0)
       line(64+2, 64,   64+1, 64,   0)
       line(64,   64+2, 64,   64+1, 0)
+      -- scores
+      cursor(0,10)
+      for en in all(pls) do
+	 color(en.id+1) print("O "..en.s)
+      end
    else
       cursor(45,5) color(0)
       print("GAME OVER")
@@ -385,6 +411,7 @@ function _update()
       if (en.id != player_id) then
 	 ai_move(en)
       else
+--	 ai_move(pl)
 	 move(pl, m)
       end
       bullet(en)
@@ -395,6 +422,7 @@ end
 
 function _init()
    -- global settings
+   sz = {}
    gameover = false
    ptowin = 3
    state = ""
@@ -404,7 +432,7 @@ function _init()
    -- create array of smiley. id = 1 is player
    player_id = 10
    pls = {}
-   for cnt in all({10, 1, 2, 5, 6, 8, 9}) do
+   for cnt in all({10, 0, 2, 4, 8, 14}) do
       en = {}
       init_smiley(en, cnt, 0)
       add(pls, en)
