@@ -163,32 +163,47 @@ function draw_smiley(sm)
    -- contour --
    circfill(cx,cy,r,sm.cl[1])
    circ(cx,cy,r,sm.cl[2])
-      
-   -- eyes
-   circfill(cx-r/3.5,cy-r/3.5,r/7,sm.cl[2])
-   circfill(cx-r/3.5,cy-r/4.6,r/6,sm.cl[2])
-   circfill(cx-r/3.5,cy-r/6,r/7,sm.cl[2])
-   
-   circfill(cx+r/3.5,cy-r/3.5,r/7,sm.cl[2])
-   circfill(cx+r/3.5,cy-r/4.6,r/6,sm.cl[2])
-   circfill(cx+r/3.5,cy-r/6,r/7,sm.cl[2])
-   
+
+   -- compute a rotation angle to draw the face
+   local rot = ((pl.d - sm.d) + 1) % 1
+   if rot > 0.8 or rot < 0.2 then
+      return 0
+   end
+   rot = (0.5 - rot) * 2 * r
+
+   -- eyes --
+   if -rot < r/2 then
+      circfill(cx-r/3.5+rot,cy-r/3.5,r/7,sm.cl[2])
+      circfill(cx-r/3.5+rot,cy-r/4.6,r/6,sm.cl[2])
+      circfill(cx-r/3.5+rot,cy-r/6,r/7,sm.cl[2])
+   end
+
+   if rot < r/2 then
+      circfill(cx+r/3.5+rot,cy-r/3.5,r/7,sm.cl[2])
+      circfill(cx+r/3.5+rot,cy-r/4.6,r/6,sm.cl[2])
+      circfill(cx+r/3.5+rot,cy-r/6,r/7,sm.cl[2])
+   end
+
    -- mouth
    if (sm.l == 3) then       -- happy
-      local x, y, r = cx, cy-r*0.1, r/1.3
+      local x, y, r2 = cx, cy-r*0.1, r/1.3
       for angle = 210, 330.0 do
-	 local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	 pset( ptx, pty,sm.cl[2])
+	 local ptx, pty = x + rot + r2 * cos( angle / 360 ), y + r2 * sin( angle / 360 )
+	 if (sqrt((ptx - cx)^2 + (pty -cy)^2) <= r) then
+	    pset(ptx, pty, sm.cl[2])
+	 end
       end
    end
    if (flr(sm.l) == 2) then       -- neutral
-      line(cx-r/2,cy+r/3,cx+r/2,cy+r/3,sm.cl[2])
+      line(cx-r/2+rot,cy+r/3,cx+r/2+rot,cy+r/3,sm.cl[2])
    end
    if (flr(sm.l) == 1) then       -- unhappy
-      local x, y, r = cx, cy+r, r/1.3
+      local x, y, r2 = cx, cy+r, r/1.3
       for angle = 30, 150.0 do
-	 local ptx, pty = x + r * cos( angle / 360 ), y + r * sin( angle / 360 )
-	 pset( ptx, pty,sm.cl[2])
+	 local ptx, pty = x + rot + r2 * cos( angle / 360 ), y + r2 * sin( angle / 360 )
+	 if (sqrt((ptx - cx)^2 + (pty -cy)^2) <= r) then
+	    pset(ptx, pty, sm.cl[2])
+	 end
       end
    end
 end
@@ -247,10 +262,8 @@ function draw_3d()
     cnt -= 1
  end
 
- -- draw bullets and scores
- cursor(0,10)
+ -- draw bullets
  for en in all(pls) do
-    color(en.id+1) print("o "..en.s)
     draw_bullet(en)
  end
 
@@ -393,7 +406,7 @@ function _draw()
       -- scores
       cursor(0,10)
       for en in all(pls) do
---	 color(en.id+1) print("o "..en.s)
+	 color(en.id+1) print("o "..en.s)
       end
    else
       cursor(45,5) color(0)
